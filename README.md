@@ -1,4 +1,4 @@
-# News Article Generator
+# Autonomous Information Retrieval & RAG Pipeline
 A simple project to understand RAG systems and their integration with LLMs.
 
 ## Setup
