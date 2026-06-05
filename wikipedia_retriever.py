@@ -1,10 +1,10 @@
-from langchain_openai import ChatOpenAI
 from langchain_core import runnables, documents
 from langchain_core.messages.ai import AIMessage
+from langchain_core.output_parsers import StrOutputParser
 from langchain_community.document_loaders import WikipediaLoader
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
-from helper import get_wiki_topic_template
+from helper import get_wiki_topic_template, PatchedChatGoogleGenerativeAI
 from typing import List
 import itertools
 from config import TEXT_SPLITTER_CHUNK_SIZE, TEXT_SPLITTER_CHUNK_OVERLAP
@@ -26,9 +26,9 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 
 # Return Valid Topics to search in Wikipedia
-def res_to_topics(res: AIMessage) -> list:
+def res_to_topics(res: str) -> list:
     res_topics = []
-    for topic in res.content.split(","):
+    for topic in res.split(","):
         topic_str = topic.strip().replace("_", " ")
         if topic_str.lower()=="<unretrievableerror>":
             continue
@@ -39,9 +39,9 @@ def res_to_topics(res: AIMessage) -> list:
 
 # Prompts the Model to return at most 5 topics relevant to the search query.
 # Returns a Chain
-def fetch_wiki_topics(llm: ChatOpenAI):
+def fetch_wiki_topics(llm: PatchedChatGoogleGenerativeAI):
     wiki_topic_prompt = ChatPromptTemplate.from_template(get_wiki_topic_template())
-    return wiki_topic_prompt | llm | res_to_topics
+    return wiki_topic_prompt | llm | StrOutputParser() | res_to_topics
 
 
 # Gets Wikipedia Documents for a topic
@@ -75,7 +75,7 @@ For given query -
 2) For the given topics - Fetch and then Split [Parallel Execution]
 3) Return a list of all the Documents retrieved from Wikipedia
 '''
-def get_all_wiki_docs(model: ChatOpenAI, search_query: str) -> list[documents.Document]:
+def get_all_wiki_docs(model: PatchedChatGoogleGenerativeAI, search_query: str) -> list[documents.Document]:
     wiki_chain = fetch_wiki_topics(model) | get_all_topics_docs
     all_topic_docs = wiki_chain.invoke(search_query)
     return all_topic_docs

@@ -1,28 +1,28 @@
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from wikipedia_retriever import get_all_wiki_docs
-from helper import get_system_prompt, get_generation_template
+from helper import get_system_prompt, get_generation_template, PatchedChatGoogleGenerativeAI
 import time
-from config import OPEN_AI_API_KEY, OPEN_AI_BASE_URL, LLM_TEMPERATURE, \
+from config import GEMINI_API_KEY, GEMINI_MODEL, EMBEDDING_MODEL, LLM_TEMPERATURE, \
                    VECTORSTORE_CONFIDENCE_THRESHOLD, VECTORSTORE_DOCUMENT_LIMIT
 class ArticleGenerator:
     def __init__(self, 
-                 api_key=OPEN_AI_API_KEY, 
-                 base_url=OPEN_AI_BASE_URL,
+                 api_key=GEMINI_API_KEY, 
+                 model_name=GEMINI_MODEL,
+                 embedding_model=EMBEDDING_MODEL,
                  temperature = LLM_TEMPERATURE,
                  ):
         
-        self.model = ChatOpenAI(
-            api_key=api_key,
-            base_url=base_url,
+        self.model = PatchedChatGoogleGenerativeAI(
+            google_api_key=api_key,
+            model=model_name,
             temperature=temperature,
         )
-        self.embeddings = OpenAIEmbeddings(
-            api_key=api_key, 
-            base_url=base_url,
-            check_embedding_ctx_length=False
+        self.embeddings = GoogleGenerativeAIEmbeddings(
+            google_api_key=api_key,
+            model=embedding_model,
         )
         self.vector_store = Chroma(
             embedding_function=self.embeddings,
