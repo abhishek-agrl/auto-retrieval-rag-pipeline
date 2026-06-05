@@ -39,3 +39,24 @@ User Query: {query}
 <|start_header_id|>assistant<|end_header_id|>
     """
     return template
+
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+class PatchedChatGoogleGenerativeAI(ChatGoogleGenerativeAI):
+    """
+    A patched version of ChatGoogleGenerativeAI that resolves a TypeError in langchain-google-genai.
+    The library's _chat_with_retry function fails to strip out `max_retries` when the model name
+    does not contain the substring 'gemini' (e.g., 'gemma-4-26b-a4b-it'), causing it to pass
+    `max_retries` to the underlying client's `generate_content()` method which does not accept it.
+    """
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        original_generate_content = self.client.generate_content
+        def patched_generate_content(*args, **gen_kwargs):
+            gen_kwargs.pop("max_retries", None)
+            return original_generate_content(*args, **gen_kwargs)
+        self.client.generate_content = patched_generate_content
+        try:
+            return super()._generate(messages, stop, run_manager, **kwargs)
+        finally:
+            self.client.generate_content = original_generate_content
